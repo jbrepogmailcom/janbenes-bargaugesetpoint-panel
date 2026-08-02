@@ -1,5 +1,5 @@
 import React from 'react';
-import { Field, FieldType, getDisplayProcessor, PanelProps } from '@grafana/data';
+import { Field, FieldType, PanelProps } from '@grafana/data';
 import { PanelDataErrorView } from '@grafana/runtime';
 import { css, cx } from '@emotion/css';
 import { useStyles2, useTheme2 } from '@grafana/ui';
@@ -162,7 +162,26 @@ const firstMainNumericSample = (props: Props): NumericSample | undefined => {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const colorFor = (value: number, min: number, max: number, steps: Array<{ color: string; value?: number | null }>) => {
+const parseThresholds = (raw: string): Array<{ color: string; value?: number | null }> => {
+  const steps = raw
+    .split(',')
+    .map((part) => {
+      const [color, value] = part.split(':').map((item) => item.trim());
+      const numericValue = Number(value);
+
+      if (!color || !Number.isFinite(numericValue)) {
+        return undefined;
+      }
+
+      return { color, value: numericValue };
+    })
+    .filter((step): step is { color: string; value: number } => Boolean(step))
+    .sort((a, b) => a.value - b.value);
+
+  return steps.length > 0 ? steps : [{ color: 'green', value: null }];
+};
+
+const colorFor = (value: number, steps: Array<{ color: string; value?: number | null }>) => {
   let color = steps[0]?.color || 'green';
 
   for (const step of steps) {
@@ -185,17 +204,17 @@ export const SimplePanel: React.FC<Props> = (props) => {
     return <PanelDataErrorView fieldConfig={fieldConfig} panelId={id} data={data} needsNumberField />;
   }
 
-  const fieldMin = main.field.config.min ?? fieldConfig.defaults.min ?? DEFAULT_MIN;
-  const fieldMax = main.field.config.max ?? fieldConfig.defaults.max ?? DEFAULT_MAX;
+  const fieldMin = options.min ?? DEFAULT_MIN;
+  const fieldMax = options.max ?? DEFAULT_MAX;
   const min = Number.isFinite(fieldMin) ? Number(fieldMin) : DEFAULT_MIN;
   const maxCandidate = Number.isFinite(fieldMax) ? Number(fieldMax) : DEFAULT_MAX;
   const max = maxCandidate > min ? maxCandidate : min + 1;
-  const thresholds = main.field.config.thresholds?.steps ?? fieldConfig.defaults.thresholds?.steps ?? [];
+  const thresholds = parseThresholds(options.thresholds || 'green:0');
   const segmentCount = clamp(Math.round(options.segmentCount || 24), 6, 80);
   const filledSegments = Math.round(((clamp(main.value, min, max) - min) / (max - min)) * segmentCount);
-  const display = main.field.display ?? getDisplayProcessor({ field: main.field, theme });
-  const formatted = display(main.value);
-  const title = main.field.config.displayName || fieldConfig.defaults.displayName || main.field.name;
+  const formattedText = `${main.value.toFixed(1)}${options.unitSuffix || ''}`;
+  const valueColor = theme.visualization.getColorByName(colorFor(main.value, thresholds));
+  const title = options.displayName || main.field.config.displayName || fieldConfig.defaults.displayName || main.field.name;
   const fontSize = clamp(Math.floor(Math.min(width / 5.4, height / 7)), 10, 22);
   const setpointPosition =
     setpoint && options.showSetpoint ? 100 - ((clamp(setpoint.value, min, max) - min) / (max - min)) * 100 : undefined;
@@ -214,13 +233,12 @@ export const SimplePanel: React.FC<Props> = (props) => {
         className={cx(
           styles.value,
           css`
-            color: ${formatted.color || theme.colors.text.primary};
+            color: ${valueColor || theme.colors.text.primary};
             font-size: ${fontSize}px;
           `
         )}
       >
-        {formatted.text}
-        {formatted.suffix}
+        {formattedText}
       </div>
 
       <div className={styles.gaugeWrap}>
@@ -228,7 +246,7 @@ export const SimplePanel: React.FC<Props> = (props) => {
           {Array.from({ length: segmentCount }, (_, index) => {
             const segmentValue = min + ((index + 1) / segmentCount) * (max - min);
             const isFilled = index < filledSegments;
-            const color = theme.visualization.getColorByName(colorFor(segmentValue, min, max, thresholds));
+            const color = theme.visualization.getColorByName(colorFor(segmentValue, thresholds));
 
             return (
               <div
