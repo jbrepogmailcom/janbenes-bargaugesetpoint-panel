@@ -14,6 +14,11 @@ type NumericSample = {
 
 const DEFAULT_MIN = 0;
 const DEFAULT_MAX = 100;
+const LCD_CELL_WIDTH = 12;
+const LCD_CELL_SPACING = 2;
+const MIN_VALUE_HEIGHT = 18;
+const MAX_VALUE_HEIGHT = 50;
+const TITLE_LINE_HEIGHT = 1.5;
 
 const getStyles = () => ({
   wrapper: css`
@@ -47,8 +52,6 @@ const getStyles = () => ({
   gauge: css`
     display: flex;
     flex-direction: column-reverse;
-    gap: 2px;
-    height: 100%;
     justify-content: flex-start;
     margin: 0 auto;
     max-width: 90px;
@@ -58,9 +61,7 @@ const getStyles = () => ({
   `,
   segment: css`
     border-radius: 2px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.45);
     flex: 0 0 auto;
-    height: 10px;
   `,
   setpoint: css`
     left: -7px;
@@ -184,6 +185,36 @@ const colorFor = (value: number, steps: Array<{ color: string; value?: number | 
   return color;
 };
 
+const colorWithAlpha = (color: string, alpha: number) => {
+  const rgb = color.match(/^rgba?\(([^)]+)\)$/);
+
+  if (rgb) {
+    const parts = rgb[1].split(',').slice(0, 3).map((part) => part.trim());
+    return `rgba(${parts.join(', ')}, ${alpha})`;
+  }
+
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    const normalized =
+      hex.length === 3
+        ? hex
+            .split('')
+            .map((part) => part + part)
+            .join('')
+        : hex;
+    const value = Number.parseInt(normalized.slice(0, 6), 16);
+
+    if (Number.isFinite(value)) {
+      const red = (value >> 16) & 255;
+      const green = (value >> 8) & 255;
+      const blue = value & 255;
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+  }
+
+  return color;
+};
+
 export const SimplePanel: React.FC<Props> = (props) => {
   const { options, data, width, height, fieldConfig, id } = props;
   const theme = useTheme2();
@@ -201,12 +232,18 @@ export const SimplePanel: React.FC<Props> = (props) => {
   const maxCandidate = Number.isFinite(fieldMax) ? Number(fieldMax) : DEFAULT_MAX;
   const max = maxCandidate > min ? maxCandidate : min + 1;
   const thresholds = parseThresholds(options.thresholds || 'green:0');
-  const segmentCount = clamp(Math.round(options.segmentCount || 24), 6, 80);
-  const filledSegments = Math.round(((clamp(main.value, min, max) - min) / (max - min)) * segmentCount);
   const formattedText = `${main.value.toFixed(1)}${options.unitSuffix || ''}`;
   const valueColor = theme.visualization.getColorByName(colorFor(main.value, thresholds));
   const title = options.displayName || main.field.config.displayName || fieldConfig.defaults.displayName || main.field.name;
   const fontSize = clamp(Math.floor(Math.min(width / 5.4, height / 7)), 10, 22);
+  const valueHeight = clamp(height * 0.1, MIN_VALUE_HEIGHT, MAX_VALUE_HEIGHT);
+  const titleHeight = 14 * TITLE_LINE_HEIGHT;
+  const maxBarHeight = Math.max(0, height - titleHeight - valueHeight);
+  const segmentCount = clamp(Math.floor(maxBarHeight / LCD_CELL_WIDTH), 6, 80);
+  const segmentHeight = Math.max(
+    1,
+    Math.floor((maxBarHeight - LCD_CELL_SPACING * segmentCount) / segmentCount)
+  );
   const markerScale = clamp(Number(options.setpointMarkerScale || 1), 0.25, 5);
   const arrowDepth = 8 * markerScale;
   const arrowHeight = 9 * markerScale;
@@ -237,19 +274,32 @@ export const SimplePanel: React.FC<Props> = (props) => {
       </div>
 
       <div className={styles.gaugeWrap}>
-        <div className={styles.gauge}>
+        <div
+          className={styles.gauge}
+          style={{
+            height: `${maxBarHeight}px`,
+          }}
+        >
           {Array.from({ length: segmentCount }, (_, index) => {
-            const segmentValue = min + ((index + 1) / segmentCount) * (max - min);
-            const isFilled = index < filledSegments;
+            const segmentValue = min + ((max - min) / segmentCount) * index;
+            const isFilled = Number.isFinite(main.value) && segmentValue <= main.value;
             const color = theme.visualization.getColorByName(colorFor(segmentValue, thresholds));
+            const background = isFilled
+              ? undefined
+              : colorWithAlpha(color, 0.18);
+            const backgroundImage = isFilled
+              ? `radial-gradient(${colorWithAlpha(color, 0.95)} 10%, ${colorWithAlpha(color, 0.55)})`
+              : undefined;
 
             return (
               <div
                 className={styles.segment}
                 key={index}
                 style={{
-                  background: isFilled ? color : theme.colors.background.secondary,
-                  opacity: isFilled ? 0.95 : 0.55,
+                  backgroundColor: background,
+                  backgroundImage,
+                  height: `${segmentHeight}px`,
+                  marginTop: `${LCD_CELL_SPACING}px`,
                 }}
               />
             );

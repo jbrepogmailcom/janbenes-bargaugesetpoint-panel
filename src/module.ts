@@ -25,17 +25,6 @@ export const plugin = new PanelPlugin<SimpleOptions>(SimplePanel).setPanelOption
       description: 'Text appended to the displayed value, for example " °C".',
       defaultValue: '',
     })
-    .addNumberInput({
-      path: 'segmentCount',
-      name: 'LED segments',
-      description: 'Number of vertical LED segments in the bar.',
-      defaultValue: 19,
-      settings: {
-        min: 6,
-        max: 80,
-        integer: true,
-      },
-    })
     .addTextInput({
       path: 'setpointRefId',
       name: 'Setpoint query refId',

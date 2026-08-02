@@ -3,7 +3,6 @@ export interface SimpleOptions {
   min: number;
   max: number;
   unitSuffix: string;
-  segmentCount: number;
   setpointRefId: string;
   showSetpoint: boolean;
   setpointColor: string;
