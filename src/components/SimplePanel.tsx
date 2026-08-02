@@ -77,22 +77,12 @@ const getStyles = () => ({
     top: -1px;
   `,
   leftArrow: css`
-    border-bottom: 5px solid transparent;
-    border-top: 5px solid transparent;
-    height: 0;
     left: 0;
     position: absolute;
-    top: -5px;
-    width: 0;
   `,
   rightArrow: css`
-    border-bottom: 5px solid transparent;
-    border-top: 5px solid transparent;
-    height: 0;
     position: absolute;
     right: 0;
-    top: -5px;
-    width: 0;
   `,
   name: css`
     flex: 0 0 auto;
@@ -217,8 +207,8 @@ export const SimplePanel: React.FC<Props> = (props) => {
   const title = options.displayName || main.field.config.displayName || fieldConfig.defaults.displayName || main.field.name;
   const fontSize = clamp(Math.floor(Math.min(width / 5.4, height / 7)), 10, 22);
   const markerScale = clamp(Number(options.setpointMarkerScale || 1), 0.25, 5);
-  const arrowDepth = 7 * markerScale;
-  const arrowHalfHeight = 5 * markerScale;
+  const arrowDepth = 8 * markerScale;
+  const arrowHeight = 9 * markerScale;
   const lineHeight = Math.max(2, 2 * markerScale);
   const setpointPosition =
     setpoint && options.showSetpoint ? 100 - ((clamp(setpoint.value, min, max) - min) / (max - min)) * 100 : undefined;
@@ -284,19 +274,21 @@ export const SimplePanel: React.FC<Props> = (props) => {
               <div
                 className={styles.leftArrow}
                 style={{
-                  borderBottomWidth: `${arrowHalfHeight}px`,
-                  borderLeft: `${arrowDepth}px solid ${options.setpointColor || '#fff'}`,
-                  borderTopWidth: `${arrowHalfHeight}px`,
-                  top: `${-arrowHalfHeight}px`,
+                  background: options.setpointColor || '#fff',
+                  clipPath: 'polygon(0 0, 100% 50%, 0 100%)',
+                  height: `${arrowHeight}px`,
+                  top: `${-arrowHeight / 2}px`,
+                  width: `${arrowDepth}px`,
                 }}
               />
               <div
                 className={styles.rightArrow}
                 style={{
-                  borderBottomWidth: `${arrowHalfHeight}px`,
-                  borderRight: `${arrowDepth}px solid ${options.setpointColor || '#fff'}`,
-                  borderTopWidth: `${arrowHalfHeight}px`,
-                  top: `${-arrowHalfHeight}px`,
+                  background: options.setpointColor || '#fff',
+                  clipPath: 'polygon(100% 0, 0 50%, 100% 100%)',
+                  height: `${arrowHeight}px`,
+                  top: `${-arrowHeight / 2}px`,
+                  width: `${arrowDepth}px`,
                 }}
               />
             </div>
