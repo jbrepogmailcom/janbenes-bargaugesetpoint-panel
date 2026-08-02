@@ -2,6 +2,8 @@
 
 Custom Grafana panel plugin based on the original Grafana `BarGauge` with one extra feature: a setpoint marker for vertical retro LCD gauges.
 
+![Bar Gauge Setpoint example](img/readme-example.png)
+
 The plugin keeps the stock Grafana LCD rendering and adds:
 
 - left and right marker arrows
