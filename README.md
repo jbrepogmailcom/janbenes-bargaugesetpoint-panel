@@ -1,117 +1,125 @@
-# Grafana panel plugin template
+# Bar Gauge Setpoint
 
-This template is a starting point for building a panel plugin for Grafana.
+Custom Grafana panel plugin based on the original Grafana `BarGauge` with one extra feature: a setpoint marker for vertical retro LCD gauges.
 
-## What are Grafana panel plugins?
+The plugin keeps the stock Grafana LCD rendering and adds:
 
-Panel plugins allow you to add new types of visualizations to your dashboard, such as maps, clocks, pie charts, lists, and more.
+- left and right marker arrows
+- a horizontal setpoint line
+- configurable marker size
+- configurable marker color with default `#ffffff`
+- support for a second query used as the setpoint value
 
-Use panel plugins when you want to do things like visualize data returned by data source queries, navigate between dashboards, or control external systems (such as smart home devices).
+## Use case
 
-## Getting started
+This plugin is useful when you want to show:
 
-### Frontend
+- the current measured value as a vertical LCD bar
+- the target or setpoint value as a marker across the bar
 
-1. Install dependencies
+Typical examples:
 
-   ```bash
-   npm install
-   ```
+- room temperature vs target temperature
+- humidity vs desired humidity
+- tank level vs warning threshold
 
-2. Build plugin in development mode and run in watch mode
+## How it works
 
-   ```bash
-   npm run dev
-   ```
+- The main value is taken from the first numeric query except the query selected as the setpoint query.
+- The setpoint value is taken from the query refId configured in `Setpoint query refId`.
+- The gauge rendering itself uses the original Grafana `BarGauge` component.
+- The setpoint marker is drawn as an overlay on top of the gauge.
 
-3. Build plugin in production mode
+## Panel options
 
-   ```bash
-   npm run build
-   ```
+- `Display name`
+  The label shown below the vertical gauge.
+- `Min`
+  Minimum gauge value.
+- `Max`
+  Maximum gauge value.
+- `Unit suffix`
+  Text appended to the displayed value, for example ` °C` or ` %`.
+- `Setpoint query refId`
+  Query refId used as the setpoint source, typically `B`.
+- `Show setpoint`
+  Enables or disables the marker overlay.
+- `Setpoint color`
+  Marker line and arrow color. Default is white.
+- `Setpoint marker size`
+  Scale factor for arrows and line thickness. `1.0` is the base size.
+- `Thresholds`
+  Comma-separated threshold definition, for example:
 
-4. Run the tests (using Jest)
+```text
+red:17,yellow:19,green:22,yellow:26,red:28
+```
 
-   ```bash
-   # Runs the tests and watches for changes, requires git init first
-   npm run test
+## Example setup
 
-   # Exits after running all the tests
-   npm run test:ci
-   ```
+### Queries
 
-5. Spin up a Grafana instance and run the plugin inside it (using Docker)
+Use two queries:
 
-   ```bash
-   npm run server
-   ```
+- `A`
+  Current measured value
+- `B`
+  Setpoint value
 
-6. Run the E2E tests (using Playwright)
+For example:
 
-   ```bash
-   # Spins up a Grafana instance first that we tests against
-   npm run server
+- `A` = `sensor.temperature`
+- `B` = `input_number.lr_target_temperature`
 
-   # If you wish to start a certain Grafana version. If not specified will use latest by default
-   GRAFANA_VERSION=11.3.0 npm run server
+### Panel configuration
 
-   # Starts the tests
-   npm run e2e
-   ```
+- `Display name`: `Obývák-teplota`
+- `Min`: `17`
+- `Max`: `30`
+- `Unit suffix`: ` °C`
+- `Setpoint query refId`: `B`
+- `Show setpoint`: `on`
+- `Setpoint color`: `#ffffff`
+- `Setpoint marker size`: `2.5`
+- `Thresholds`: `red:17,yellow:19,green:22,yellow:26,red:28`
 
-7. Run the linter
+## Development
 
-   ```bash
-   npm run lint
+Install dependencies:
 
-   # or
+```bash
+npm install
+```
 
-   npm run lint:fix
-   ```
+Run typecheck:
 
-# Distributing your plugin
+```bash
+npm run typecheck
+```
 
-When distributing a Grafana plugin either within the community or privately the plugin must be signed so the Grafana application can verify its authenticity. This can be done with the `@grafana/sign-plugin` package.
+Build production bundle:
 
-_Note: It's not necessary to sign a plugin during development. The docker development environment that is scaffolded with `@grafana/create-plugin` caters for running the plugin without a signature._
+```bash
+npm run build
+```
 
-## Initial steps
+## Home Assistant Grafana add-on
 
-Before signing a plugin please read the Grafana [plugin publishing and signing criteria](https://grafana.com/legal/plugins/#plugin-publishing-and-signing-criteria) documentation carefully.
+This plugin can be loaded into the Home Assistant Grafana add-on through `custom_plugins`.
 
-`@grafana/create-plugin` has added the necessary commands and workflows to make signing and distributing a plugin via the grafana plugins catalog as straightforward as possible.
+Example add-on option:
 
-Before signing a plugin for the first time please consult the Grafana [plugin signature levels](https://grafana.com/legal/plugins/#what-are-the-different-classifications-of-plugins) documentation to understand the differences between the types of signature level.
+```yaml
+custom_plugins:
+  - name: janbenes-bargaugesetpoint-panel
+    url: https://github.com/jbrepogmailcom/janbenes-bargaugesetpoint-panel/releases/download/v1.0.9/janbenes-bargaugesetpoint-panel-1.0.9.zip
+    unsigned: true
+```
 
-1. Create a [Grafana Cloud account](https://grafana.com/signup).
-2. Make sure that the first part of the plugin ID matches the slug of your Grafana Cloud account.
-   - _You can find the plugin ID in the `plugin.json` file inside your plugin directory. For example, if your account slug is `acmecorp`, you need to prefix the plugin ID with `acmecorp-`._
-3. Create a Grafana Cloud API key with the `PluginPublisher` role.
-4. Keep a record of this API key as it will be required for signing a plugin
+After changing the add-on configuration, restart the Grafana add-on.
 
-## Signing a plugin
+## Repository
 
-### Using Github actions release workflow
+GitHub:
 
-If the plugin is using the github actions supplied with `@grafana/create-plugin` signing a plugin is included out of the box. The [release workflow](./.github/workflows/release.yml) can prepare everything to make submitting your plugin to Grafana as easy as possible. Before being able to sign the plugin however a secret needs adding to the Github repository.
-
-1. Please navigate to "settings > secrets > actions" within your repo to create secrets.
-2. Click "New repository secret"
-3. Name the secret "GRAFANA_API_KEY"
-4. Paste your Grafana Cloud API key in the Secret field
-5. Click "Add secret"
-
-#### Push a version tag
-
-To trigger the workflow we need to push a version tag to github. This can be achieved with the following steps:
-
-1. Run `npm version <major|minor|patch>`
-2. Run `git push origin main --follow-tags`
-
-## Learn more
-
-Below you can find source code for existing app plugins and other related documentation.
-
-- [Basic panel plugin example](https://github.com/grafana/grafana-plugin-examples/tree/master/examples/panel-basic#readme)
-- [`plugin.json` documentation](https://grafana.com/developers/plugin-tools/reference/plugin-json)
-- [How to sign a plugin?](https://grafana.com/developers/plugin-tools/publish-a-plugin/sign-a-plugin)
+`https://github.com/jbrepogmailcom/janbenes-bargaugesetpoint-panel`
