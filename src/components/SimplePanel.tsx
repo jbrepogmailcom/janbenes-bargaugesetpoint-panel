@@ -19,41 +19,38 @@ const LCD_CELL_SPACING = 2;
 const MIN_VALUE_HEIGHT = 18;
 const MAX_VALUE_HEIGHT = 50;
 const TITLE_LINE_HEIGHT = 1.5;
+const VALUE_LINE_HEIGHT = 1;
 
 const getStyles = () => ({
   wrapper: css`
-    align-items: stretch;
     background: transparent;
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     font-family: Open Sans, sans-serif;
     height: 100%;
-    justify-content: stretch;
     overflow: hidden;
     position: relative;
     width: 100%;
   `,
+  retro: css`
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    position: relative;
+  `,
   value: css`
     flex: 0 0 auto;
     font-weight: 400;
-    line-height: 1.1;
+    line-height: ${VALUE_LINE_HEIGHT};
     overflow: hidden;
-    padding: 2px 4px 0;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
-  `,
-  gaugeWrap: css`
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 4px 8px 2px;
-    position: relative;
   `,
   gauge: css`
     display: flex;
     flex-direction: column-reverse;
     justify-content: flex-start;
-    margin: 0 auto;
     max-width: 90px;
     min-width: 34px;
     position: relative;
@@ -89,9 +86,8 @@ const getStyles = () => ({
   name: css`
     flex: 0 0 auto;
     font-size: 13px;
-    line-height: 1.15;
+    line-height: ${TITLE_LINE_HEIGHT};
     overflow: hidden;
-    padding: 0 4px 4px;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -215,6 +211,20 @@ const colorWithAlpha = (color: string, alpha: number) => {
   return color;
 };
 
+const calculateVerticalLayout = (panelHeight: number, title: string) => {
+  const titleHeight = title ? 14 * TITLE_LINE_HEIGHT : 0;
+  const valueHeight = Math.min(Math.max(panelHeight * 0.1, MIN_VALUE_HEIGHT), MAX_VALUE_HEIGHT);
+  const wrapperHeight = Math.max(0, panelHeight - titleHeight);
+  const maxBarHeight = Math.max(0, panelHeight - (titleHeight + valueHeight));
+
+  return {
+    titleHeight,
+    valueHeight,
+    wrapperHeight,
+    maxBarHeight,
+  };
+};
+
 export const SimplePanel: React.FC<Props> = (props) => {
   const { options, data, width, height, fieldConfig, id } = props;
   const theme = useTheme2();
@@ -236,9 +246,7 @@ export const SimplePanel: React.FC<Props> = (props) => {
   const valueColor = theme.visualization.getColorByName(colorFor(main.value, thresholds));
   const title = options.displayName || main.field.config.displayName || fieldConfig.defaults.displayName || main.field.name;
   const fontSize = clamp(Math.floor(Math.min(width / 5.4, height / 7)), 10, 22);
-  const valueHeight = clamp(height * 0.1, MIN_VALUE_HEIGHT, MAX_VALUE_HEIGHT);
-  const titleHeight = 14 * TITLE_LINE_HEIGHT;
-  const maxBarHeight = Math.max(0, height - titleHeight - valueHeight);
+  const { titleHeight, valueHeight, wrapperHeight, maxBarHeight } = calculateVerticalLayout(height, title);
   const segmentCount = clamp(Math.floor(maxBarHeight / LCD_CELL_WIDTH), 6, 80);
   const segmentHeight = Math.max(
     1,
@@ -261,19 +269,46 @@ export const SimplePanel: React.FC<Props> = (props) => {
         `
       )}
     >
-      <div
-        className={cx(
-          styles.value,
-          css`
-            color: ${valueColor || theme.colors.text.primary};
-            font-size: ${fontSize}px;
-          `
-        )}
-      >
-        {formattedText}
-      </div>
+      {title && (
+        <div
+          className={styles.name}
+          style={{
+            height: `${titleHeight}px`,
+            minHeight: `${titleHeight}px`,
+            padding: '0 4px',
+          }}
+        >
+          {title}
+        </div>
+      )}
 
-      <div className={styles.gaugeWrap}>
+      <div
+        className={styles.retro}
+        style={{
+          height: `${wrapperHeight}px`,
+          width: `${width}px`,
+        }}
+      >
+        <div
+          className={cx(
+            styles.value,
+            css`
+              color: ${valueColor || theme.colors.text.primary};
+              font-size: ${fontSize}px;
+            `
+          )}
+          style={{
+            height: `${valueHeight}px`,
+            maxWidth: `${width}px`,
+            width: `${width}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {formattedText}
+        </div>
+
         <div
           className={styles.gauge}
           style={{
@@ -284,9 +319,7 @@ export const SimplePanel: React.FC<Props> = (props) => {
             const segmentValue = min + ((max - min) / segmentCount) * index;
             const isFilled = Number.isFinite(main.value) && segmentValue <= main.value;
             const color = theme.visualization.getColorByName(colorFor(segmentValue, thresholds));
-            const background = isFilled
-              ? undefined
-              : colorWithAlpha(color, 0.18);
+            const background = isFilled ? undefined : colorWithAlpha(color, 0.18);
             const backgroundImage = isFilled
               ? `radial-gradient(${colorWithAlpha(color, 0.95)} 10%, ${colorWithAlpha(color, 0.55)})`
               : undefined;
@@ -346,8 +379,6 @@ export const SimplePanel: React.FC<Props> = (props) => {
           )}
         </div>
       </div>
-
-      <div className={styles.name}>{title}</div>
     </div>
   );
 };
