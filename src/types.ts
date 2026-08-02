@@ -7,5 +7,6 @@ export interface SimpleOptions {
   setpointRefId: string;
   showSetpoint: boolean;
   setpointColor: string;
+  setpointMarkerScale: number;
   thresholds: string;
 }

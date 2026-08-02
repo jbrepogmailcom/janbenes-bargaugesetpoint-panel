@@ -216,6 +216,10 @@ export const SimplePanel: React.FC<Props> = (props) => {
   const valueColor = theme.visualization.getColorByName(colorFor(main.value, thresholds));
   const title = options.displayName || main.field.config.displayName || fieldConfig.defaults.displayName || main.field.name;
   const fontSize = clamp(Math.floor(Math.min(width / 5.4, height / 7)), 10, 22);
+  const markerScale = clamp(Number(options.setpointMarkerScale || 1), 0.25, 5);
+  const arrowDepth = 7 * markerScale;
+  const arrowHalfHeight = 5 * markerScale;
+  const lineHeight = Math.max(2, 2 * markerScale);
   const setpointPosition =
     setpoint && options.showSetpoint ? 100 - ((clamp(setpoint.value, min, max) - min) / (max - min)) * 100 : undefined;
 
@@ -261,12 +265,39 @@ export const SimplePanel: React.FC<Props> = (props) => {
           })}
 
           {setpointPosition !== undefined && (
-            <div className={styles.setpoint} style={{ top: `${setpointPosition}%` }}>
-              <div className={styles.setpointLine} style={{ background: options.setpointColor || '#fff' }} />
-              <div className={styles.leftArrow} style={{ borderLeft: `7px solid ${options.setpointColor || '#fff'}` }} />
+            <div
+              className={styles.setpoint}
+              data-testid="bar-gauge-setpoint-marker"
+              data-marker-scale={markerScale}
+              style={{ left: `${-arrowDepth}px`, right: `${-arrowDepth}px`, top: `${setpointPosition}%` }}
+            >
+              <div
+                className={styles.setpointLine}
+                style={{
+                  background: options.setpointColor || '#fff',
+                  height: `${lineHeight}px`,
+                  left: `${arrowDepth}px`,
+                  right: `${arrowDepth}px`,
+                  top: `${-lineHeight / 2}px`,
+                }}
+              />
+              <div
+                className={styles.leftArrow}
+                style={{
+                  borderBottomWidth: `${arrowHalfHeight}px`,
+                  borderLeft: `${arrowDepth}px solid ${options.setpointColor || '#fff'}`,
+                  borderTopWidth: `${arrowHalfHeight}px`,
+                  top: `${-arrowHalfHeight}px`,
+                }}
+              />
               <div
                 className={styles.rightArrow}
-                style={{ borderRight: `7px solid ${options.setpointColor || '#fff'}` }}
+                style={{
+                  borderBottomWidth: `${arrowHalfHeight}px`,
+                  borderRight: `${arrowDepth}px solid ${options.setpointColor || '#fff'}`,
+                  borderTopWidth: `${arrowHalfHeight}px`,
+                  top: `${-arrowHalfHeight}px`,
+                }}
               />
             </div>
           )}

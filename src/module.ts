@@ -53,6 +53,18 @@ export const plugin = new PanelPlugin<SimpleOptions>(SimplePanel).setPanelOption
       defaultValue: '#ffffff',
       showIf: (config) => config.showSetpoint,
     })
+    .addNumberInput({
+      path: 'setpointMarkerScale',
+      name: 'Setpoint marker size',
+      description: 'Setpoint arrow and line size. 1.0 is the original 100% size.',
+      defaultValue: 1,
+      settings: {
+        min: 0.25,
+        max: 5,
+        step: 0.25,
+      },
+      showIf: (config) => config.showSetpoint,
+    })
     .addTextInput({
       path: 'thresholds',
       name: 'Thresholds',
