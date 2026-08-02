@@ -34,6 +34,8 @@ type ThresholdStep = {
 
 const DEFAULT_MIN = 0;
 const DEFAULT_MAX = 100;
+const LCD_CELL_WIDTH = 12;
+const LCD_CELL_SPACING = 2;
 const MIN_VALUE_HEIGHT = 18;
 const MAX_VALUE_HEIGHT = 50;
 const TITLE_LINE_HEIGHT = 1.5;
@@ -44,6 +46,11 @@ const getStyles = () => ({
     overflow: hidden;
     position: relative;
     width: 100%;
+  `,
+  gaugeHost: css`
+    height: 100%;
+    margin: 0 auto;
+    position: relative;
   `,
   setpoint: css`
     pointer-events: none;
@@ -221,14 +228,23 @@ export const SimplePanel: React.FC<Props> = (props) => {
     theme,
   });
   const { valueHeight, maxBarHeight } = calculateVerticalLayout(height, title);
+  const cellCount = Math.max(1, Math.floor(maxBarHeight / LCD_CELL_WIDTH));
+  const cellSize = Math.max(1, Math.floor((maxBarHeight - LCD_CELL_SPACING * cellCount) / cellCount));
+  const valueRange = max - min;
   const markerScale = clamp(Number(options.setpointMarkerScale || 1), 0.25, 5);
   const arrowDepth = 8 * markerScale;
   const arrowHeight = 9 * markerScale;
   const lineHeight = Math.max(2, 2 * markerScale);
-  const setpointTop =
-    setpoint && options.showSetpoint
-      ? valueHeight + (1 - (clamp(setpoint.value, min, max) - min) / (max - min)) * maxBarHeight
-      : undefined;
+  const gaugeWidth = Math.max(32, Math.round(width * 0.8));
+  let setpointTop: number | undefined;
+
+  if (setpoint && options.showSetpoint) {
+    const clampedSetpoint = clamp(setpoint.value, min, max);
+    const stepValue = valueRange / cellCount;
+    const litCells = valueRange > 0 ? clamp(Math.ceil((clampedSetpoint - min) / stepValue), 0, cellCount) : 0;
+    const cellsAbove = cellCount - litCells;
+    setpointTop = valueHeight + cellsAbove * (cellSize + LCD_CELL_SPACING);
+  }
 
   return (
     <div
@@ -240,66 +256,73 @@ export const SimplePanel: React.FC<Props> = (props) => {
         `
       )}
     >
-      <BarGauge
-        display={display}
-        displayMode={BarGaugeDisplayMode.Lcd}
-        field={gaugeFieldConfig}
-        height={height}
-        isOverflow={false}
-        itemSpacing={2}
-        lcdCellWidth={12}
-        namePlacement={BarGaugeNamePlacement.Auto}
-        orientation={VizOrientation.Vertical}
-        showUnfilled={true}
-        theme={theme}
-        value={gaugeValue}
-        valueDisplayMode={BarGaugeValueMode.Color}
-        width={width}
-      />
+      <div
+        className={styles.gaugeHost}
+        style={{
+          width: `${gaugeWidth}px`,
+        }}
+      >
+        <BarGauge
+          display={display}
+          displayMode={BarGaugeDisplayMode.Lcd}
+          field={gaugeFieldConfig}
+          height={height}
+          isOverflow={false}
+          itemSpacing={LCD_CELL_SPACING}
+          lcdCellWidth={LCD_CELL_WIDTH}
+          namePlacement={BarGaugeNamePlacement.Auto}
+          orientation={VizOrientation.Vertical}
+          showUnfilled={true}
+          theme={theme}
+          value={gaugeValue}
+          valueDisplayMode={BarGaugeValueMode.Color}
+          width={gaugeWidth}
+        />
 
-      {setpointTop !== undefined && (
-        <div
-          className={styles.setpoint}
-          data-testid="bar-gauge-setpoint-marker"
-          data-marker-scale={markerScale}
-          style={{
-            left: `${-arrowDepth}px`,
-            right: `${-arrowDepth}px`,
-            top: `${setpointTop}px`,
-          }}
-        >
+        {setpointTop !== undefined && (
           <div
-            className={styles.setpointLine}
+            className={styles.setpoint}
+            data-testid="bar-gauge-setpoint-marker"
+            data-marker-scale={markerScale}
             style={{
-              background: options.setpointColor || '#fff',
-              height: `${lineHeight}px`,
-              left: `${arrowDepth}px`,
-              right: `${arrowDepth}px`,
-              top: `${-lineHeight / 2}px`,
+              left: `${-arrowDepth}px`,
+              right: `${-arrowDepth}px`,
+              top: `${setpointTop}px`,
             }}
-          />
-          <div
-            className={styles.leftArrow}
-            style={{
-              background: options.setpointColor || '#fff',
-              clipPath: 'polygon(0 0, 100% 50%, 0 100%)',
-              height: `${arrowHeight}px`,
-              top: `${-arrowHeight / 2}px`,
-              width: `${arrowDepth}px`,
-            }}
-          />
-          <div
-            className={styles.rightArrow}
-            style={{
-              background: options.setpointColor || '#fff',
-              clipPath: 'polygon(100% 0, 0 50%, 100% 100%)',
-              height: `${arrowHeight}px`,
-              top: `${-arrowHeight / 2}px`,
-              width: `${arrowDepth}px`,
-            }}
-          />
-        </div>
-      )}
+          >
+            <div
+              className={styles.setpointLine}
+              style={{
+                background: options.setpointColor || '#fff',
+                height: `${lineHeight}px`,
+                left: `${arrowDepth}px`,
+                right: `${arrowDepth}px`,
+                top: `${-lineHeight / 2}px`,
+              }}
+            />
+            <div
+              className={styles.leftArrow}
+              style={{
+                background: options.setpointColor || '#fff',
+                clipPath: 'polygon(0 0, 100% 50%, 0 100%)',
+                height: `${arrowHeight}px`,
+                top: `${-arrowHeight / 2}px`,
+                width: `${arrowDepth}px`,
+              }}
+            />
+            <div
+              className={styles.rightArrow}
+              style={{
+                background: options.setpointColor || '#fff',
+                clipPath: 'polygon(100% 0, 0 50%, 100% 100%)',
+                height: `${arrowHeight}px`,
+                top: `${-arrowHeight / 2}px`,
+                width: `${arrowDepth}px`,
+              }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
