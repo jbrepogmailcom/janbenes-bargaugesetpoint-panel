@@ -47,8 +47,9 @@ const getStyles = () => ({
   gauge: css`
     display: flex;
     flex-direction: column-reverse;
-    gap: 3px;
+    gap: 2px;
     height: 100%;
+    justify-content: flex-start;
     margin: 0 auto;
     max-width: 90px;
     min-width: 34px;

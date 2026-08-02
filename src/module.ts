@@ -29,7 +29,7 @@ export const plugin = new PanelPlugin<SimpleOptions>(SimplePanel).setPanelOption
       path: 'segmentCount',
       name: 'LED segments',
       description: 'Number of vertical LED segments in the bar.',
-      defaultValue: 24,
+      defaultValue: 19,
       settings: {
         min: 6,
         max: 80,
