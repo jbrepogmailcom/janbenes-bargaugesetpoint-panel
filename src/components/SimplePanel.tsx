@@ -30,7 +30,7 @@ const getStyles = () => ({
   `,
   value: css`
     flex: 0 0 auto;
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.1;
     overflow: hidden;
     padding: 2px 4px 0;
@@ -58,8 +58,8 @@ const getStyles = () => ({
   segment: css`
     border-radius: 2px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.45);
-    flex: 1 1 0;
-    min-height: 3px;
+    flex: 0 0 auto;
+    height: 10px;
   `,
   setpoint: css`
     left: -7px;
